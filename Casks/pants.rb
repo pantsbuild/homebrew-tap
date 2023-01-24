@@ -28,7 +28,6 @@ cask "pants" do
   desc "Fast, scalable, user-friendly build system for codebases of all sizes"
   homepage "https://pantsbuild.org"
 
-  auto_updates true
   depends_on arch: [:arm64, :x86_64]
 
   binary Utils.binary, target: "pants"
