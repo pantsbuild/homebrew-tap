@@ -22,7 +22,7 @@ For maintainers.
 
 To update the `pants` cask in this tap when there is a newer version of `scie-pants` available:
 
-    ./bump_pants.sh <version>
+    ./bump_version.sh <version>
 
 This will update the `Casks/pants.rb` file with the new version and the sha sums which are fetched from the release page on Github.
 
