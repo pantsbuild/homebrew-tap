@@ -9,9 +9,6 @@ To update `pants`
 
     brew update && brew upgrade pants
 
-> Notice:
-> It is advised to stick to using either `brew upgrade` **or** the `SCIE_BOOT=update pants` method for updating `pants`, as brew will not attempt to replace a modified version of `pants` by default after using the self update method.
-
 
 Tap development
 ---------------
