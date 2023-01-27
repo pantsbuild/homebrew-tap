@@ -33,6 +33,14 @@ cask "pants" do
 
   binary Utils.binary, target: "pants"
 
+  preflight do
+    target = config.binarydir / "pants"
+    if target.exist? && !target.symlink?
+      opoo "replacing self-updated #{target}"
+      target.delete
+    end
+  end
+
   postflight do
     Quarantine.release!(download_path: "#{caskroom_path}/#{version}/#{Utils.binary}") if Quarantine.available?
   end
