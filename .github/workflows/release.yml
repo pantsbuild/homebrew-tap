@@ -1,0 +1,60 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to manually run a deploy for.
+        required: true
+      branch:
+        description: The branch to update.
+        default: main
+jobs:
+  org-check:
+    name: Check GitHub Organization
+    if: ${{ github.repository_owner == 'pantsbuild' }}
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Noop
+        run: "true"
+  determine-tag:
+    name: Determine the release tag to operate against.
+    needs: org-check
+    runs-on: ubuntu-20.04
+    outputs:
+      release-tag: ${{ steps.determine-tag.outputs.release-tag }}
+    steps:
+      - name: Determine Tag
+        id: determine-tag
+        run: |
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            RELEASE_TAG=${{ github.event.inputs.tag }}
+          else
+            RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          fi
+          if [[ "${RELEASE_TAG}" =~ ^v[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "release-tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Release tag '${RELEASE_TAG}' must match 'v\d+.\d+.\d+'."
+            exit 1
+          fi
+  bump-version:
+    name: Update pants cask
+    needs:
+      - determine-tag
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
+        run: |
+          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }}
+
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git add Casks/pants.rb
+          git commit -m "Bump scie-pants ${{ needs.determine-tag.outputs.release-tag }}"
+          git tag ${{ neds.determine-tag.outputs.release-tag }}
+          git push --tags $${{ github.event.inputs.branch }}
