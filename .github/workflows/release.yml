@@ -1,0 +1,56 @@
+name: Bump `scie-pants`
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The `scie-pants` tag
+        required: true
+      branch:
+        description: The branch to update.
+        default: main
+jobs:
+  determine-tag:
+    name: Validate Tag
+    runs-on: ubuntu-20.04
+    outputs:
+      release-tag: ${{ steps.determine-tag.outputs.release-tag }}
+    steps:
+      - name: Determine Tag
+        id: determine-tag
+        run: |
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            RELEASE_TAG=${{ github.event.inputs.tag }}
+          else
+            RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          fi
+          if [[ "${RELEASE_TAG}" =~ ^v[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "release-tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Release tag '${RELEASE_TAG}' must match 'v\d+.\d+.\d+'."
+            exit 1
+          fi
+  bump-version:
+    name: Update pants cask
+    needs: determine-tag
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }} || exit 1
+          git diff
+
+          git add Casks/pants.rb
+          git commit -m "Bump scie-pants ${{ needs.determine-tag.outputs.release-tag }}"
+          git push
+
+          git tag ${{ needs.determine-tag.outputs.release-tag }}
+          git push --tags
