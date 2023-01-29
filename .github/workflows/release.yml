@@ -1,17 +1,16 @@
-name: Release
+name: Bump `scie-pants`
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The tag to manually run a deploy for.
+        description: The `scie-pants` tag
         required: true
       branch:
         description: The branch to update.
         default: main
 jobs:
   determine-tag:
-    name: Determine the release tag to operate against.
-    needs: org-check
+    name: Validate Tag
     runs-on: ubuntu-20.04
     outputs:
       release-tag: ${{ steps.determine-tag.outputs.release-tag }}
@@ -32,9 +31,10 @@ jobs:
           fi
   bump-version:
     name: Update pants cask
-    needs:
-      - determine-tag
+    needs: determine-tag
     runs-on: ubuntu-20.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout tap
         uses: actions/checkout@v3
@@ -42,12 +42,15 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
       - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
         run: |
-          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }} || exit 1
+          git diff
 
           git add Casks/pants.rb
           git commit -m "Bump scie-pants ${{ needs.determine-tag.outputs.release-tag }}"
-          git tag ${{ neds.determine-tag.outputs.release-tag }}
-          git push --tags $${{ github.event.inputs.branch }}
+          git push
+
+          git tag ${{ needs.determine-tag.outputs.release-tag }}
+          git push --tags
