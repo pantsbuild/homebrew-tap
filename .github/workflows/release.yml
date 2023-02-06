@@ -8,6 +8,9 @@ on:
       branch:
         description: The branch to update.
         default: main
+      cask:
+        descript: The cask to update.
+        default: pants
 jobs:
   determine-tag:
     name: Validate Tag
@@ -30,7 +33,7 @@ jobs:
             exit 1
           fi
   bump-version:
-    name: Update pants cask
+    name: Update $${ github.event.inputs.cask }} cask
     needs: determine-tag
     runs-on: ubuntu-20.04
     permissions:
@@ -40,17 +43,17 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.branch }}
-      - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
+      - name: Bump version for ${{ github.event.inputs.cask }} to ${{ needs.determine-tag.outputs.release-tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }} || exit 1
+          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }} ${{ github.event.inputs.cask }} || exit 1
           git diff
 
-          git add Casks/pants.rb
-          git commit -m "Bump scie-pants ${{ needs.determine-tag.outputs.release-tag }}"
+          git add -u
+          git commit -m "Bump ${{ github.event.inputs.cask }} ${{ needs.determine-tag.outputs.release-tag }}"
           git push
 
-          git tag ${{ needs.determine-tag.outputs.release-tag }}
+          git tag ${{ github.event.inputs.cask }}-${{ needs.determine-tag.outputs.release-tag }}
           git push --tags

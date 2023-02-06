@@ -3,12 +3,25 @@ set -eufo pipefail
 
 # A script to update the version and shas
 version=${1/v/}
-cask=Casks/pants.rb
 
 if [ "$version" == "" ]; then
-  echo "Usage: $0 <version>"
+  echo "Usage: $0 <version> [<cask-name>]"
   exit 1
 fi
+
+case "${2:-pants}" in
+    pants)
+        cask=Casks/pants.rb
+        repo=pantsbuild/scie-pants
+        binary=scie-pants;;
+    scie-jump)
+        cask=Casks/scie-jump.rb
+        repo=a-scie/jump
+        binary=scie-jump;;
+    *)
+        echo "Unknown cask: $cask"
+        exit 1;;
+esac
 
 inline=(-i)
 if [ $(uname -o) == Darwin ]; then
@@ -19,7 +32,7 @@ for tuple in 'arm: aarch64' 'intel: x86_64'; do
   declare -a platform=($tuple)
   tag=${platform[0]}
   arch=${platform[1]}
-  url="https://github.com/pantsbuild/scie-pants/releases/download/v${version}/scie-pants-macos-${arch}.sha256"
+  url="https://github.com/${repo}/releases/download/v${version}/${binary}-macos-${arch}.sha256"
   sha=$(curl -Ls ${url} | cut -f 1 -d ' ')
   sed -f - "${inline[@]}" "${cask}" <<EOF
 s/version "[^"]*"/version "${version}"/
