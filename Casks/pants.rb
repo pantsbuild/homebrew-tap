@@ -13,10 +13,10 @@ cask "pants" do
     end
   end
 
-  version "0.8.1"
+  version "0.8.2"
   if OS.mac?
-    sha256 arm: "afe335bec043b94dd9b4c44b50c74a5003649388e645866d3fc988d1a3c270c9",
-           intel: "8c4fdc6cb3a60cc3eacef4a4281038c115954243742516bac4a6747536f76d4e"
+    sha256 arm: "ff0397d5ea0ff205361539f6448d20e9c91bc04d8683dc3ee6885f8f95052e9d",
+           intel: "dae99a6592c9b5b8c0435a19ef352d804e0230e4950ffa8844f84ff497adbdc8"
   else
     # Casks not supported on Linux: https://github.com/Linuxbrew/brew/issues/742
     # sha256 arm: "...",
