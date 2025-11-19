@@ -1,0 +1,13 @@
+# Documentation for all configuration options is here:
+#   https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    groups:
+      gha-deps:
+        patterns:
+          - "*"
+    schedule:
+      interval: "monthly"
