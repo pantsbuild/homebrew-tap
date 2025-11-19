@@ -11,7 +11,8 @@ on:
 jobs:
   determine-tag:
     name: Validate Tag
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       release-tag: ${{ steps.determine-tag.outputs.release-tag }}
     steps:
@@ -29,15 +30,17 @@ jobs:
             echo "::error::Release tag '${RELEASE_TAG}' must match 'v\d+.\d+.\d+'."
             exit 1
           fi
+
   bump-version:
     name: Update pants cask
     needs: determine-tag
-    runs-on: ubuntu-20.04
     permissions:
       contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout tap
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
       - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
