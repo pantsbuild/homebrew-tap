@@ -37,7 +37,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout tap
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
       - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
