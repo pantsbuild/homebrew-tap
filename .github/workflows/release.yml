@@ -1,59 +1,116 @@
 name: Bump `scie-pants`
+
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The `scie-pants` tag
+        description: The scie-pants release version (i.e. `v1.2.3`)
         required: true
-      branch:
-        description: The branch to update.
-        default: main
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  determine-tag:
-    name: Validate Tag
+  org-check:
+    name: Check GitHub Organization
+    if: ${{ github.repository_owner == 'pantsbuild' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    steps:
+      - name: Noop
+        run: "true"
+
+  determine-tag:
+    name: Determine the release tag to operate against.
+    needs: org-check
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag }}
     outputs:
       release-tag: ${{ steps.determine-tag.outputs.release-tag }}
+      release-version: ${{ steps.determine-tag.outputs.release-version }}
+    timeout-minutes: 5
+
     steps:
       - name: Determine Tag
         id: determine-tag
         run: |
-          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
-            RELEASE_TAG=${{ github.event.inputs.tag }}
-          else
-            RELEASE_TAG=${GITHUB_REF#refs/tags/}
-          fi
-          if [[ "${RELEASE_TAG}" =~ ^v[0-9]+.[0-9]+.[0-9]+$ ]]; then
+          if [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "release-tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+            echo "release-version=${RELEASE_TAG#v}" >> $GITHUB_OUTPUT
           else
             echo "::error::Release tag '${RELEASE_TAG}' must match 'v\d+.\d+.\d+'."
             exit 1
           fi
 
-  bump-version:
-    name: Update pants cask
+  github-pr:
+    name: Create a version bump pull request
     needs: determine-tag
     permissions:
       contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+
     steps:
-      - name: Checkout tap
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.branch }}
-      - name: Bump `scie-pants` version in Casks/pants.rb to ${{ needs.determine-tag.outputs.release-tag }}
+      - uses: actions/checkout@v6
+
+      - name: Update pants.rb
+        env:
+          RELEASE_TAG: ${{ needs.determine-tag.outputs.release-tag }}
+          RELEASE_VERSION: ${{ needs.determine-tag.outputs.release-version }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -z "$RELEASE_VERSION" ]]; then
+              echo "::error::The 'RELEASE_VERSION' was empty"
+              exit 1
+          fi
 
-          ./bump_version.sh ${{ needs.determine-tag.outputs.release-tag }} || exit 1
-          git diff
+          # Grab the SHA256 for just the macos-aarch64 build
+          NEW_RELEASE_SHA=$(gh release view "$RELEASE_TAG" \
+            --repo pantsbuild/scie-pants \
+            --json assets \
+            --jq '.assets[] | select(.name=="scie-pants-macos-aarch64") | .digest | split(":")[1]')
 
+          if [[ -z "$NEW_RELEASE_SHA" ]]; then
+            echo "::error::Failed to get the sha256 from `gh release view` on $RELEASE_TAG"
+            exit 1
+          fi
+
+          # Replace version and sha256 lines (they need to be the 2nd and 3rd lines of the file)
+          sed -i "2s/.*/  version \"$RELEASE_VERSION\"/" ./Casks/pants.rb
+          sed -i "3s/.*/  sha256 \"$NEW_RELEASE_SHA\"/" ./Casks/pants.rb
+
+      - name: Commit changes and create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ needs.determine-tag.outputs.release-version }}       
+        run: |
+          if [[ -z $(git status --porcelain) ]]; then
+            echo "::error::No changes detected in Casks/pants.rb - skipping PR creation"
+            exit 1
+          fi
+
+          # Assign our general account to the local user
+          git config --local user.email "pantsbuild+github-automation@gmail.com"
+          git config --local user.name "Worker Pants (Pantsbuild GitHub Automation Bot)"
+
+          # Create and checkout a new release branch
+          BRANCH_NAME="automation/release/$RELEASE_VERSION"
+          git checkout -b "$BRANCH_NAME"
+
+          # Commit and push to the release branch
+          TITLE="Prepare $RELEASE_VERSION"
           git add Casks/pants.rb
-          git commit -m "Bump scie-pants ${{ needs.determine-tag.outputs.release-tag }}"
-          git push
-
-          git tag ${{ needs.determine-tag.outputs.release-tag }}
-          git push --tags
+          git commit -m "$TITLE"
+          git push -u origin "$BRANCH_NAME"
+          
+          # Create PR from the release branch to main
+          gh pr create \
+            --title "$TITLE" \
+            --body "" \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --assignee "${{ github.actor }}"

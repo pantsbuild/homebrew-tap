@@ -1,28 +1,25 @@
-Pants tap for Homebrew
-======================
+# Pants tap for Homebrew
 
 To install `pants` using [`brew`](https://brew.sh/)
 
-    brew install pantsbuild/tap/pants
+```bash
+brew install pantsbuild/tap/pants
+```
 
 To update `pants`
 
-    brew update && brew upgrade pants
+```bash
+brew update && brew upgrade pants
+```
 
+## Tap Updates
 
-Tap development
----------------
+Upon release of a new `scie-pants`, the [update-homebrew-tap](https://github.com/pantsbuild/scie-pants/blob/14c9998fc188a9965a6d13923dad40983f061954/.github/workflows/release.yml#L155) step should run and kick off this tap's release workflow.
 
-For maintainers.
+To do this manually, run:
 
-#### Update the version of `scie-pants`
-
-To update the `pants` cask in this tap when there is a newer version of `scie-pants` available:
-
-    ./bump_version.sh <version>
-
-This will update the `Casks/pants.rb` file with the new version and the sha sums which are fetched from the release page on Github.
-
-You may verify that the updated cask is working by applying it directly from file locally with:
-
-    brew install --cask ./Casks/pants.rb
+```bash
+gh workflow run release.yml \
+    --raw-field "tag=v{{ A.B.C }}" \
+    --repo pantsbuild/homebrew-tap
+```
