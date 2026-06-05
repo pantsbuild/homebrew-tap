@@ -39,5 +39,5 @@ jobs:
       - name: Verify pants
         run: |
           command -v pants
-          pants --version
+          SCIE_BOOT=update pants --help
           brew list --cask pants
