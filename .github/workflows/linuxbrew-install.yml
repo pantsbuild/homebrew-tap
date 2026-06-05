@@ -36,6 +36,11 @@ jobs:
       - name: Install pants
         run: brew install --cask --verbose "$TAP/pants"
 
+      - name: Check pants cask
+        run: |
+          brew style --cask "$TAP/pants"
+          brew audit --cask "$TAP/pants"
+
       - name: Verify pants
         run: |
           command -v pants
