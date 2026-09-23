@@ -1,0 +1,48 @@
+name: Linuxbrew install
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install pants on Linuxbrew
+    runs-on: ubuntu-latest
+    container: ghcr.io/homebrew/brew:main
+    timeout-minutes: 20
+    env:
+      TAP: ${{ github.repository_owner }}/tap
+
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          stable: true
+
+      - name: Show Homebrew configuration
+        run: brew config
+
+      - name: Install pants
+        run: brew install --cask --verbose "$TAP/pants"
+
+      - name: Check pants cask
+        run: |
+          brew style --cask "$TAP/pants"
+          brew audit --cask "$TAP/pants"
+
+      - name: Verify pants
+        run: |
+          command -v pants
+          SCIE_BOOT=update pants --help
+          brew list --cask pants
