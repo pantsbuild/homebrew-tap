@@ -85,7 +85,7 @@ jobs:
 
       - name: Commit changes and create pull request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ needs.determine-tag.outputs.release-version }}       
         run: |
           if [[ -z $(git status --porcelain) ]]; then
