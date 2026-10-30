@@ -60,6 +60,7 @@ jobs:
 
       - name: Update pants.rb
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.determine-tag.outputs.release-tag }}
           RELEASE_VERSION: ${{ needs.determine-tag.outputs.release-version }}
         run: |
